@@ -21,14 +21,33 @@ public class RefreshTokenService {
     @Autowired
     UserRepository userRepository;
 
+    // public RefreshToken createRefreshToken(String username) {
+    // UserInfo userInfoExtracted = userRepository.findByUsername(username);
+    // RefreshToken refreshToken = RefreshToken.builder()
+    // .userInfo(userInfoExtracted)
+    // .token(UUID.randomUUID().toString())
+    // .expiryDate(Instant.now().plusMillis(600000))
+    // .build();
+    // return refreshTokenRepository.save(refreshToken);
+    // }
+
     public RefreshToken createRefreshToken(String username) {
-        UserInfo userInfoExtracted = userRepository.findByUsername(username);
-        RefreshToken refreshToken = RefreshToken.builder()
-                .userInfo(userInfoExtracted)
-                .token(UUID.randomUUID().toString())
-                .expiryDate(Instant.now().plusMillis(600000))
-                .build();
-        return refreshTokenRepository.save(refreshToken);
+        UserInfo user = userRepository.findByUsername(username);
+
+        return refreshTokenRepository.findByUserInfo(user)
+                .map(existing -> {
+                    existing.setToken(UUID.randomUUID().toString());
+                    existing.setExpiryDate(Instant.now().plusMillis(600000));
+                    return refreshTokenRepository.save(existing);
+                })
+                .orElseGet(() -> {
+                    RefreshToken refreshToken = RefreshToken.builder()
+                            .userInfo(user)
+                            .token(UUID.randomUUID().toString())
+                            .expiryDate(Instant.now().plusMillis(600000))
+                            .build();
+                    return refreshTokenRepository.save(refreshToken);
+                });
     }
 
     public Optional<RefreshToken> findByToken(String token) {
